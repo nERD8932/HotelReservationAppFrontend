@@ -15,7 +15,11 @@ data class HotelData(
     val pricePerNight: Int,
     val roomType: String,
     val location: String,
-    val imageData: ImageData
+)
+
+data class SearchResults(
+    val hotelData: List<HotelData>,
+    val imageData: Map<Int, ImageData>
 )
 
 data class SearchRequest(
@@ -37,5 +41,5 @@ interface ApiService {
     suspend fun getLocations(): List<LocationData>
 
     @GET("search/")
-    suspend fun searchHotels(@Body request: SearchRequest): List<HotelData>
+    suspend fun searchHotels(@Body request: SearchRequest): SearchResults
 }
