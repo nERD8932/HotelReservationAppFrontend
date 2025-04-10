@@ -11,8 +11,7 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // define your colors for dark theme
-
-val DarkBG = Color(0f, 0f, 0f, 0.2f)
+val DarkBG = Color(0.071f, 0.075f, 0.094f, 1.0f)
 val DarkTXT = Color.White
 
 // define your colors for dark theme

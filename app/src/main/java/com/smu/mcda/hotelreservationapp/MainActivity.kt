@@ -1,23 +1,27 @@
 package com.smu.mcda.hotelreservationapp
 
+import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.icu.util.Calendar
+import android.media.Image
 import android.os.Bundle
-import android.util.Base64
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,9 +30,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -36,6 +42,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DateRangePicker
@@ -82,15 +89,14 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.smu.mcda.hotelreservationapp.network.ImageData
 import com.smu.mcda.hotelreservationapp.network.LocationData
 import com.smu.mcda.hotelreservationapp.network.RetrofitClient
+import com.smu.mcda.hotelreservationapp.network.SearchRequest
 import com.smu.mcda.hotelreservationapp.ui.theme.HotelReservationAppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayInputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.min
@@ -104,10 +110,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             HotelReservationAppTheme {
-
                 Scaffold( modifier = Modifier.fillMaxSize() ) {  innerPadding ->
                     Home(
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(innerPadding),
                     )
                 }
             }
@@ -118,7 +123,7 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Home(modifier: Modifier = Modifier) {
-    var height by remember { mutableStateOf(0.35f) }
+
     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
 
     val dateFormatter = remember {
@@ -130,6 +135,12 @@ fun Home(modifier: Modifier = Modifier) {
     }
 
     var active by remember { mutableStateOf(false) }
+
+    val height by animateFloatAsState(
+        targetValue = if (!active) 0.35f else 0.1f,
+        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+    )
+
     val context = LocalContext.current
 
     var query by remember { mutableStateOf("") }
@@ -162,58 +173,55 @@ fun Home(modifier: Modifier = Modifier) {
             return year in currentYear..(currentYear + 1)
         }})
 
-    LaunchedEffect(active) {
-        height = if (active) {
-            0f
-        } else {
-            0.35f
-        }
-    }
-
     Column(Modifier
         .fillMaxSize()
         .verticalScroll(rememberScrollState())) {
-        Box(Modifier.weight(0.35f)) {
-            ImageSlideshow(
-                modifier = Modifier.fillMaxWidth(),
-                intervalMillis = 12000L,
-            )
 
-            Column (
-                modifier = Modifier
-                    .fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Reserver",
-                    fontSize = TextUnit(9f, TextUnitType.Em),
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    modifier = Modifier
-                        .background(
-                            color = MaterialTheme.colorScheme.background.copy(alpha = 0.66f)
-                        )
-                        .padding(10.dp, 1.dp),
+        Box(Modifier.weight(height)) {
+            // this@Column.AnimatedVisibility(visible = !active) {
+                ImageSlideshow(
+                    modifier = Modifier.fillMaxWidth(),
+                    intervalMillis = 12000L,
                 )
-                Spacer(Modifier
-                    .fillMaxWidth()
-                    .height(5.dp))
-                Text (
-                    text = "Book your dream vacation today",
-                    fontSize = TextUnit(4f, TextUnitType.Em),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier
-                        .background(
-                            color = MaterialTheme.colorScheme.background.copy(alpha = 0.66f)
-                        )
-                        .padding(10.dp, 1.dp),
-                    maxLines = 1,
 
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Reserver",
+                        fontSize = TextUnit(9f, TextUnitType.Em),
+                        fontFamily = FontFamily.Serif,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .background(
+                                color = MaterialTheme.colorScheme.background.copy(alpha = 0.66f)
+                            )
+                            .padding(10.dp, 1.dp),
                     )
-            }
+                    Spacer(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(5.dp)
+                    )
+                    Text(
+                        text = "Book your dream vacation today",
+                        fontSize = TextUnit(4f, TextUnitType.Em),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier
+                            .background(
+                                color = MaterialTheme.colorScheme.background.copy(alpha = 0.66f)
+                            )
+                            .padding(10.dp, 1.dp),
+                        maxLines = 1,
+
+                        )
+                }
+           // }
 
         }
         Box(Modifier.weight(0.50f), contentAlignment = Alignment.Center) {
@@ -242,7 +250,10 @@ fun Home(modifier: Modifier = Modifier) {
                     modifier = Modifier
                 )
                 {
-                    Search(modifier=Modifier.padding(30.dp, 3.dp, 30.dp, 12.dp), setQ=setQ, setA=setA)
+                    Search(
+                        modifier=Modifier.padding(30.dp, 3.dp, 30.dp, 12.dp),
+                        setQ=setQ,
+                        setA=setA)
                 }
                 Row (
                     verticalAlignment = Alignment.Top,
@@ -305,7 +316,9 @@ fun Home(modifier: Modifier = Modifier) {
             Row (
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.Absolute.Right,
-                modifier = Modifier.fillMaxSize().padding(30.dp, 0.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(30.dp, 0.dp)
             )
             {
                 Button(onClick = { clickSearch(context, date=date, location=query, formatter=dateFormatter) }) {
@@ -320,21 +333,27 @@ fun Home(modifier: Modifier = Modifier) {
 fun clickSearch(context: Context, date: DateRangePickerState, location: String, formatter: SimpleDateFormat) {
     if (date.selectedStartDateMillis!=null && date.selectedEndDateMillis!=null)
     {
-        val startDate = formatter.format(date.selectedStartDateMillis)
-        val endDate = formatter.format(date.selectedEndDateMillis)
+        try {
+            val searchReq = SearchRequest(
+                startDate=formatter.format(date.selectedStartDateMillis),
+                endDate=formatter.format(date.selectedEndDateMillis),
+                location=location)
 
-        val intent = Intent(context, SearchResultsActivity::class.java).apply {
-            putExtra("location", location)
-            putExtra("startDate", startDate)
-            putExtra("endDate", endDate)
+            val intent = Intent(context, SearchResultsActivity::class.java).apply {
+                putExtra("searchReq", searchReq)
+            }
+
+            val options = ActivityOptions.makeCustomAnimation(
+                context,
+                R.anim.slide_in_bottom,
+                R.anim.slide_out_top
+            )
+
+            context.startActivity(intent, options.toBundle())
         }
-
-        val options = ActivityOptions.makeCustomAnimation(
-            context,
-            R.anim.slide_in_bottom,
-            R.anim.slide_out_top
-        )
-        context.startActivity(intent, options.toBundle())
+        catch (e: Exception){
+            Log.e("E", e.toString())
+        }
     }
 }
 
@@ -343,7 +362,6 @@ fun ImageSlideshow(
     modifier: Modifier = Modifier,
     intervalMillis: Long = 12000L,
 ) {
-    var images by remember { mutableStateOf<List<ImageData>>(emptyList()) }
     var bitmaps by remember { mutableStateOf<List<ImageBitmap>>(emptyList()) }
     var currentIndex by remember { mutableIntStateOf(0) }
     var imageLoaded by remember { mutableStateOf(false) }
@@ -352,16 +370,40 @@ fun ImageSlideshow(
     // Fetch images once
     LaunchedEffect(Unit) {
         try {
-            val fetchedImages = RetrofitClient.api.getImages()
-            images = fetchedImages
 
             withContext(Dispatchers.IO) {
-                bitmaps = fetchedImages.mapNotNull { img ->
-                    decodeBase64ToBitmap(img.data)?.asImageBitmap()
+
+                val fetchedImages = RetrofitClient.api.getImages()
+
+                for ((i, image) in fetchedImages.withIndex()) {
+                    val img = Decoder.decodeBase64ToBitmap(image.data)?.asImageBitmap()
+                    if (img != null) {
+                        bitmaps += img
+                        imageLoaded = true
+                    }
                 }
             }
+//            if(vm_images["bg"]!!.values.isEmpty())
+//            {
+//                Log.i("STATE", "Loading from API")
+//                withContext(Dispatchers.IO) {
+//
+//                    val fetchedImages = RetrofitClient.api.getImages()
+//
+//                    for ((i, image) in fetchedImages.withIndex()) {
+//                        val img = Decoder.decodeBase64ToBitmap(image.data)?.asImageBitmap()
+//                        if (img != null) {
+//                            bitmaps += img
+//                            viewModel.addImage(i, i.toString(), img, "bg")
+//                        }
+//                    }
+//                }
+//            }
+//            else {
+//                Log.i("STATE", "Loading from VM")
+//                vm_images["bg"]!!.values.forEach {ic -> bitmaps += ic.bitmap}
+//            }
 
-            imageLoaded = true
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -417,7 +459,10 @@ fun HomePreview() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Search(modifier: Modifier = Modifier, setQ: (String) -> Unit, setA: (Boolean) -> Unit) {
+fun Search(modifier: Modifier = Modifier,
+           setQ: (String) -> Unit,
+           setA: (Boolean) -> Unit,
+           ) {
 
     var query by remember { mutableStateOf("") }
     var active by remember { mutableStateOf(false) }
@@ -425,41 +470,98 @@ fun Search(modifier: Modifier = Modifier, setQ: (String) -> Unit, setA: (Boolean
     var destinations by remember { mutableStateOf(emptyList<LocationData>()) }
     var images by remember { mutableStateOf(emptyMap<String, ImageBitmap?>()) }
     var results by remember { mutableStateOf(destinations) }
+    var leading by remember { mutableStateOf<@Composable() (() -> Unit)?>(null) }
 
     fun performSearch(input: String) {
         results = if (input.isBlank()) destinations.subList(0, min(destinations.size, 4))
         else destinations.filter { it.name.contains(input, ignoreCase = true) }
         results = results.subList(0, min(results.size, 4))
+
+        for(result in results)
+        {
+            if (result.name.equals(input, ignoreCase = true))
+            {
+                query = results[0].name
+            }
+        }
+
+        leading = if(images[query]!=null) {
+            @Composable {
+                Image(
+                    images[query]!!,
+                    "Picture of City",
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                )
+            }
+        } else {
+            null
+        }
     }
 
     LaunchedEffect(Unit) {
         try {
-            destinations = RetrofitClient.api.getLocations()
-            for(dest in destinations)
-            {
-                images += dest.name to decodeBase64ToBitmap(dest.imageData.data)?.asImageBitmap()
+
+            withContext(Dispatchers.IO) {
+                destinations = RetrofitClient.api.getLocations()
+                for (dest in destinations) {
+                    var img = Decoder.decodeBase64ToBitmap(dest.imageData.data)?.asImageBitmap()
+                    if (img != null) {
+                        images += dest.name to img
+                    } else {
+                        img = Bitmap.createBitmap(
+                            512,
+                            512,
+                            Bitmap.Config.ARGB_8888
+                        ).asImageBitmap()
+                        images += dest.name to img
+                    }
+                }
             }
+
+//            if(vm_images["location"]!!.values.isNotEmpty())
+//            {
+//                vm_images["location"]!!.values.forEach { img -> images += img.name to img.bitmap}
+//            }
+//            else {
+//                withContext(Dispatchers.IO) {
+//                    destinations = RetrofitClient.api.getLocations()
+//                    for (dest in destinations) {
+//                        var img = Decoder.decodeBase64ToBitmap(dest.imageData.data)?.asImageBitmap()
+//                        if (img != null) {
+//                            images += dest.name to img
+//                            viewModel.addImage(dest.locId, dest.name, img, "location")
+//                        } else {
+//                            img = Bitmap.createBitmap(
+//                                512,
+//                                512,
+//                                Bitmap.Config.ARGB_8888
+//                            ).asImageBitmap()
+//                            images += dest.name to img
+//                            viewModel.addImage(dest.locId, dest.name, img, "location")
+//                        }
+//                    }
+//                }
+//            }
             performSearch("")
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    Column(Modifier.padding(16.dp, 4.dp, 16.dp, 4.dp)) {
+    Column(Modifier.padding(16.dp, 0.dp).wrapContentHeight()) {
         DockedSearchBar(
             query = query,
             onQueryChange = {
                 query = it
                 setQ(it)
                 coroutineScope.launch {
-                    delay(300)
                     performSearch(query)
                 }
             },
             onSearch = {
-                active = false
                 coroutineScope.launch {
-                    active = false
                     performSearch(query)
                 }
             },
@@ -469,24 +571,26 @@ fun Search(modifier: Modifier = Modifier, setQ: (String) -> Unit, setA: (Boolean
                 setA(it)
                              },
             placeholder = { Text("Search by cities, or leave blank") },
-            leadingIcon = {
-                if(images[query] != null)
-                {
-                    Image(
-                        images[query]!!,
-                        "Picture of City",
-                        modifier = Modifier.size(30.dp).clip(CircleShape)
-                    )
-                }
-            },
+            leadingIcon = leading,
             trailingIcon =
             {
-                if(active)
+                if(active||images[query]!=null)
                 {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close Icon",
-                        modifier = Modifier.clickable { if(query.isNotEmpty()) {query = ""} else {active=false} })
+                        modifier = Modifier.clickable
+                        {
+                            if(query.isNotEmpty())
+                            {
+                                query = ""
+                                performSearch(query)
+                            } else
+                            {
+                                active=false
+                                setA(false)
+                            }
+                        })
                 }
                 else
                 {
@@ -495,12 +599,15 @@ fun Search(modifier: Modifier = Modifier, setQ: (String) -> Unit, setA: (Boolean
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(max = 230.dp)
+                .wrapContentHeight()
                 //.background(color=Color(1f, 0.5f, 0.5f, 0.33f))
             ,
         ) {
             if (destinations.isNotEmpty())
             {
                 results.forEach { city ->
+
                     ListItem(
                         headlineContent = {
                             Row {
@@ -516,14 +623,18 @@ fun Search(modifier: Modifier = Modifier, setQ: (String) -> Unit, setA: (Boolean
                                 Image(
                                     images[city.name]!!,
                                     "Picture of City",
-                                    modifier = Modifier.size(30.dp).clip(CircleShape)
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .clip(CircleShape)
                                 )
                             }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
+                            .wrapContentHeight()
                             .clickable {
                                 query = city.name
+                                performSearch(query)
                                 setQ(city.name)
                                 active = false
                                 setA(false)
@@ -532,8 +643,8 @@ fun Search(modifier: Modifier = Modifier, setQ: (String) -> Unit, setA: (Boolean
                 }
             }
             else{
-                Column (
-                    Modifier.fillMaxWidth(),
+                Column(
+                    modifier = Modifier.fillMaxWidth().wrapContentHeight(), // minimal and controlled padding
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -553,16 +664,6 @@ fun Search(modifier: Modifier = Modifier, setQ: (String) -> Unit, setA: (Boolean
                 }
             }
         }
-    }
-}
-
-fun decodeBase64ToBitmap(base64Str: String): Bitmap? {
-    return try {
-        val decodedBytes = Base64.decode(base64Str, Base64.DEFAULT)
-        BitmapFactory.decodeStream(ByteArrayInputStream(decodedBytes))
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
     }
 }
 
