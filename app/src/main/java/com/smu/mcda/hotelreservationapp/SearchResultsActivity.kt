@@ -121,7 +121,7 @@ class SearchResultsActivity : ComponentActivity() {
                         }
                     }
                     Box(contentAlignment = Alignment.TopStart,
-                        modifier = Modifier.fillMaxWidth().padding(innerPadding)){
+                        modifier = Modifier.fillMaxWidth().padding(innerPadding).padding(10.dp, 0.dp)){
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             "Back",
@@ -207,6 +207,7 @@ fun SearchResults(modifier: Modifier = Modifier, searchReq: SearchRequest){
                     HotelEntry(
                         hotel,
                         images[hotel.hotelId]!!,
+                        searchReq = searchReq,
                         context = context
                     )
                 }
@@ -231,7 +232,7 @@ fun SearchResults(modifier: Modifier = Modifier, searchReq: SearchRequest){
 }
 // img: ImageBitmap, name: String, roomType: String, price: Int
 @Composable
-fun HotelEntry(h: HotelData, i: ImageBitmap, modifier: Modifier = Modifier, context: Context) {
+fun HotelEntry(h: HotelData, i: ImageBitmap, modifier: Modifier = Modifier, searchReq: SearchRequest, context: Context) {
     Spacer(Modifier.height(5.dp))
     Box(modifier = modifier
         .fillMaxWidth()
@@ -241,16 +242,17 @@ fun HotelEntry(h: HotelData, i: ImageBitmap, modifier: Modifier = Modifier, cont
             indication = rememberRipple(bounded = true),
             interactionSource = remember { MutableInteractionSource() }
         ) {
-            val intent = Intent(context, SearchResultsActivity::class.java).apply {
+            val intent = Intent(context, BookHotelActivity::class.java).apply {
                 putExtra("hotelData", h)
+                putExtra("searchReq", searchReq)
             }
 
-            val options = ActivityOptions.makeCustomAnimation(
-                context,
-                R.anim.slide_in_bottom,
-                R.anim.slide_out_top
-            )
-            context.startActivity(intent, options.toBundle())
+//            val options = ActivityOptions.makeCustomAnimation(
+//                context,
+//                R.anim.slide_in_bottom,
+//                R.anim.slide_out_top
+//            )
+            context.startActivity(intent)
         }
     ) {
         Image(

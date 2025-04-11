@@ -17,7 +17,11 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +29,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +41,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -120,7 +126,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun Home(modifier: Modifier = Modifier) {
 
@@ -222,7 +228,6 @@ fun Home(modifier: Modifier = Modifier) {
                         )
                 }
            // }
-
         }
         Box(Modifier.weight(0.50f), contentAlignment = Alignment.Center) {
             Column (
@@ -270,6 +275,7 @@ fun Home(modifier: Modifier = Modifier) {
                                 text = "Booking Dates",
                                 fontSize = TextUnit(4f/0.9f, TextUnitType.Em),
                                 fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.padding(15.dp, 0.dp)
                             )
                         },
@@ -343,13 +349,13 @@ fun clickSearch(context: Context, date: DateRangePickerState, location: String, 
                 putExtra("searchReq", searchReq)
             }
 
-            val options = ActivityOptions.makeCustomAnimation(
-                context,
-                R.anim.slide_in_bottom,
-                R.anim.slide_out_top
-            )
+//            val options = ActivityOptions.makeCustomAnimation(
+//                context,
+//                R.anim.slide_in_bottom,
+//                R.anim.slide_out_top
+//            )
 
-            context.startActivity(intent, options.toBundle())
+            context.startActivity(intent)
         }
         catch (e: Exception){
             Log.e("E", e.toString())
@@ -383,26 +389,6 @@ fun ImageSlideshow(
                     }
                 }
             }
-//            if(vm_images["bg"]!!.values.isEmpty())
-//            {
-//                Log.i("STATE", "Loading from API")
-//                withContext(Dispatchers.IO) {
-//
-//                    val fetchedImages = RetrofitClient.api.getImages()
-//
-//                    for ((i, image) in fetchedImages.withIndex()) {
-//                        val img = Decoder.decodeBase64ToBitmap(image.data)?.asImageBitmap()
-//                        if (img != null) {
-//                            bitmaps += img
-//                            viewModel.addImage(i, i.toString(), img, "bg")
-//                        }
-//                    }
-//                }
-//            }
-//            else {
-//                Log.i("STATE", "Loading from VM")
-//                vm_images["bg"]!!.values.forEach {ic -> bitmaps += ic.bitmap}
-//            }
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -457,6 +443,7 @@ fun HomePreview() {
     }
 }
 
+@ExperimentalFoundationApi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Search(modifier: Modifier = Modifier,
@@ -482,6 +469,7 @@ fun Search(modifier: Modifier = Modifier,
             if (result.name.equals(input, ignoreCase = true))
             {
                 query = results[0].name
+                setQ(query)
             }
         }
 
@@ -520,30 +508,6 @@ fun Search(modifier: Modifier = Modifier,
                 }
             }
 
-//            if(vm_images["location"]!!.values.isNotEmpty())
-//            {
-//                vm_images["location"]!!.values.forEach { img -> images += img.name to img.bitmap}
-//            }
-//            else {
-//                withContext(Dispatchers.IO) {
-//                    destinations = RetrofitClient.api.getLocations()
-//                    for (dest in destinations) {
-//                        var img = Decoder.decodeBase64ToBitmap(dest.imageData.data)?.asImageBitmap()
-//                        if (img != null) {
-//                            images += dest.name to img
-//                            viewModel.addImage(dest.locId, dest.name, img, "location")
-//                        } else {
-//                            img = Bitmap.createBitmap(
-//                                512,
-//                                512,
-//                                Bitmap.Config.ARGB_8888
-//                            ).asImageBitmap()
-//                            images += dest.name to img
-//                            viewModel.addImage(dest.locId, dest.name, img, "location")
-//                        }
-//                    }
-//                }
-//            }
             performSearch("")
         } catch (e: Exception) {
             e.printStackTrace()
@@ -563,6 +527,7 @@ fun Search(modifier: Modifier = Modifier,
             onSearch = {
                 coroutineScope.launch {
                     performSearch(query)
+                    if(images[query]!=null) active=false
                 }
             },
             active = active,
@@ -606,40 +571,53 @@ fun Search(modifier: Modifier = Modifier,
         ) {
             if (destinations.isNotEmpty())
             {
-                results.forEach { city ->
-
-                    ListItem(
-                        headlineContent = {
-                            Row {
-                                Text(
-                                    city.name,
-                                    fontSize = TextUnit(4f, TextUnitType.Em)
-                                )
-                            }
-                        },
-                        leadingContent = {
-                            if(images[city.name]!=null)
-                            {
-                                Image(
-                                    images[city.name]!!,
-                                    "Picture of City",
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .clip(CircleShape)
-                                )
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight()
-                            .clickable {
-                                query = city.name
-                                performSearch(query)
-                                setQ(city.name)
-                                active = false
-                                setA(false)
-                            }
-                    )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(8.dp)
+                ) {
+                    items(
+                        count = destinations.size,
+                        key = { index -> destinations[index].name }
+                    ) { index ->
+                        val city = destinations[index]
+                        AnimatedVisibility(
+                            visible = destinations[index] in results, // You'd toggle this based on your logic
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            ListItem(
+                                headlineContent = {
+                                    Row {
+                                        Text(
+                                            city.name,
+                                            fontSize = TextUnit(4f, TextUnitType.Em)
+                                        )
+                                    }
+                                },
+                                leadingContent = {
+                                    images[city.name]?.let { image ->
+                                        Image(
+                                            image,
+                                            contentDescription = "Picture of City",
+                                            modifier = Modifier
+                                                .size(30.dp)
+                                                .clip(CircleShape)
+                                        )
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight()
+                                    .clickable {
+                                        query = city.name
+                                        performSearch(query)
+                                        setQ(city.name)
+                                        active = false
+                                        setA(false)
+                                    }
+                            )
+                        }
+                    }
                 }
             }
             else{
