@@ -52,7 +52,8 @@ data class BookRequest(
     val location: String,
     val guests: List<Guest>,
     val hotelId: Int,
-    val roomNumber: Int
+    val roomNumber: Int,
+    val paymentAmount: Int
 )
 
 @Parcelize
@@ -70,6 +71,12 @@ data class Guests(
     var list: List<Guest>
 ) : Parcelable
 
+@Parcelize
+data class BookingResponse(
+    var booking: String,
+    var qr: String
+) : Parcelable
+
 
 interface ApiService {
     @GET("media/")
@@ -84,7 +91,7 @@ interface ApiService {
                              @Query("location") location: String): SearchResults?
 
     @POST("book/")
-    suspend fun book(@Body request: BookRequest): Response<Unit>
+    suspend fun book(@Body request: BookRequest): Response<BookingResponse>
 }
 
 @RequiresApi(Build.VERSION_CODES.O)

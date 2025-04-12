@@ -183,12 +183,12 @@ fun AddDetails(modifier: Modifier = Modifier, hotelInfo: HotelData, searchReq: S
             }
         }
         Spacer(Modifier.height(10.dp).fillMaxWidth())
-        Box(Modifier.weight(0.10f).padding(10.dp, 0.dp), contentAlignment = Alignment.BottomCenter)
+        Box(Modifier.weight(0.15f).padding(10.dp, 0.dp), contentAlignment = Alignment.BottomCenter)
         {
             UserCounter(alter=alterUserCount)
         }
 
-        Box(Modifier.weight(0.8f).padding(30.dp, 0.dp))
+        Box(Modifier.weight(0.75f).padding(30.dp, 0.dp))
         {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

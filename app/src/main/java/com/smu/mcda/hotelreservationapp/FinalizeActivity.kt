@@ -153,6 +153,7 @@ class FinalizeActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun BookButton(hotelInfo: HotelData, searchReq: SearchRequest, guests: List<Guest>){
 
@@ -166,14 +167,16 @@ fun BookButton(hotelInfo: HotelData, searchReq: SearchRequest, guests: List<Gues
             location = hotelInfo.location,
             guests = guests,
             hotelId = hotelInfo.hotelId,
-            roomNumber = hotelInfo.roomNumber
+            roomNumber = hotelInfo.roomNumber,
+            paymentAmount = (nightsBetween(searchReq.startDate, searchReq.endDate) * hotelInfo.pricePerNight).toInt()
         )
 
         CoroutineScope(Dispatchers.IO).launch {
             val response = RetrofitClient.api.book(b)
             if (response.isSuccessful) {
-
+                val booking = response.body()
                 val intent = Intent(context, SuccessActivity::class.java).apply {
+                    putExtra("booking", booking)
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }
                 context.startActivity(intent)
