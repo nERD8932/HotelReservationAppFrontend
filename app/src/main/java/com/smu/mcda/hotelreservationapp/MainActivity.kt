@@ -26,6 +26,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -60,6 +62,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDateRangePickerState
@@ -82,7 +85,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -91,6 +96,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
@@ -105,6 +111,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.math.exp
 import kotlin.math.min
 
 
@@ -148,6 +155,15 @@ fun Home(modifier: Modifier = Modifier) {
     )
 
     val context = LocalContext.current
+
+    var color: Color by remember { mutableStateOf(Color.Unspecified) }
+    color = if (isSystemInDarkTheme())
+    {
+        Color(0.137f, 0.149f, 0.188f, 1.0f)
+    }
+    else {
+        Color(0.898f, 0.902f, 0.945f, 1.0f)
+    }
 
     var query by remember { mutableStateOf("") }
 
@@ -229,7 +245,7 @@ fun Home(modifier: Modifier = Modifier) {
                 }
            // }
         }
-        Box(Modifier.weight(0.50f), contentAlignment = Alignment.Center) {
+        Box(Modifier.weight(0.55f), contentAlignment = Alignment.Center) {
             Column (
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -260,25 +276,39 @@ fun Home(modifier: Modifier = Modifier) {
                         setQ=setQ,
                         setA=setA)
                 }
-                Row (
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.scale(0.9f),
+//                Row (
+//                    verticalAlignment = Alignment.Bottom,
+//                    horizontalArrangement = Arrangement.Start,
+//                    modifier = Modifier
+//                ) {
+//
+//
+//                }
+                Column (
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .graphicsLayer {
+                            transformOrigin = TransformOrigin(0.5f, 0f) // Anchor to top-center
+                        }
+                        .scale(0.9f),
                 )
                 {
-                    //.background(Color.White.copy(alpha = 0.66f))
+                    //.background(Color.Black.copy(alpha = 0.66f))
+                    Text(
+                        text="Booking Dates",
+                        textAlign = TextAlign.Left,
+                        fontSize = TextUnit(4.3f, TextUnitType.Em),
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .padding(10.dp, 10.dp, 0.dp, 0.dp)
+                            .fillMaxWidth()
+                            .wrapContentHeight()
+                    )
                     DateRangePicker(
                         state = date,
                         showModeToggle = false,
-                        title = {
-                            Text(
-                                text = "Booking Dates",
-                                fontSize = TextUnit(4f/0.9f, TextUnitType.Em),
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.padding(15.dp, 0.dp)
-                            )
-                        },
+                        title = null,
                         headline = {
                             CompositionLocalProvider(
                                 LocalTextStyle provides TextStyle(
@@ -286,7 +316,9 @@ fun Home(modifier: Modifier = Modifier) {
                                     textAlign = TextAlign.Center)
                             ) {
                                 Row (
-                                    modifier=Modifier.fillMaxWidth(),
+                                    modifier=Modifier
+                                        .fillMaxWidth()
+                                        .padding(0.dp, 20.dp, 0.dp, 10.dp),
                                     horizontalArrangement = Arrangement.Center
                                 ){
 
@@ -309,7 +341,13 @@ fun Home(modifier: Modifier = Modifier) {
                                     }
                                 }
                             }
-                        }
+                        },
+                        modifier = Modifier
+                            .padding(10.dp, 10.dp, 10.dp, 30.dp)
+                            .background(
+                                color,
+                                RoundedCornerShape(25.dp)
+                            )
                     )
                 }
 
@@ -317,7 +355,7 @@ fun Home(modifier: Modifier = Modifier) {
         }
         Box(Modifier
             .fillMaxSize()
-            .weight(0.15f)) {
+            .weight(0.10f)) {
 
             Row (
                 verticalAlignment = Alignment.Top,
@@ -514,7 +552,9 @@ fun Search(modifier: Modifier = Modifier,
         }
     }
 
-    Column(Modifier.padding(16.dp, 0.dp).wrapContentHeight()) {
+    Column(Modifier
+        .padding(16.dp, 0.dp)
+        .wrapContentHeight()) {
         DockedSearchBar(
             query = query,
             onQueryChange = {
@@ -622,7 +662,9 @@ fun Search(modifier: Modifier = Modifier,
             }
             else{
                 Column(
-                    modifier = Modifier.fillMaxWidth().wrapContentHeight(), // minimal and controlled padding
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(), // minimal and controlled padding
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -651,3 +693,8 @@ fun Modifier.fadingEdge(brush: Brush) = this
         drawContent()
         drawRect(brush = brush, blendMode = BlendMode.DstIn)
     }
+
+fun Color.applyTonalElevation(elevation: Dp, surfaceTint: Color): Color {
+    val alpha = (1 - exp(-elevation.value / 4)) * 0.11f
+    return surfaceTint.copy(alpha = alpha).compositeOver(this)
+}

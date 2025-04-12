@@ -3,6 +3,7 @@ package com.smu.mcda.hotelreservationapp
 import android.app.ActivityOptions
 import android.content.Intent
 import android.os.Bundle
+import android.os.Parcelable
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
@@ -13,8 +14,10 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -41,6 +45,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -63,15 +68,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import androidx.core.text.isDigitsOnly
+import com.smu.mcda.hotelreservationapp.network.Guest
+import com.smu.mcda.hotelreservationapp.network.Guests
 import com.smu.mcda.hotelreservationapp.network.HotelData
 import com.smu.mcda.hotelreservationapp.network.SearchRequest
+import com.smu.mcda.hotelreservationapp.network.SearchResults
 import com.smu.mcda.hotelreservationapp.ui.theme.HotelReservationAppTheme
+import kotlinx.parcelize.Parcelize
 
 class BookHotelActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,8 +97,8 @@ class BookHotelActivity : ComponentActivity() {
             finish()
         }
 
-        val h = intent.getParcelableExtra<HotelData>("hotel")
-        val searchReq = intent.getParcelableExtra<SearchRequest>("searchReq")
+        val h = intent.getParcelableExtra<HotelData>("hotelData")!!
+        val searchReq = intent.getParcelableExtra<SearchRequest>("searchReq")!!
 
 
         enableEdgeToEdge()
@@ -96,7 +106,7 @@ class BookHotelActivity : ComponentActivity() {
             HotelReservationAppTheme {
 
                 Scaffold( modifier = Modifier.fillMaxSize() ) { innerPadding ->
-                    AddDetails(Modifier.padding(innerPadding))
+                    AddDetails(Modifier.padding(innerPadding), h, searchReq)
                     Box(contentAlignment = Alignment.TopStart,
                         modifier = Modifier.fillMaxWidth().padding(innerPadding).padding(10.dp, 0.dp)
                     ){
@@ -118,9 +128,20 @@ class BookHotelActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AddDetails(modifier: Modifier = Modifier) {
+fun AddDetails(modifier: Modifier = Modifier, hotelInfo: HotelData, searchReq: SearchRequest) {
 
+    var color by remember { mutableStateOf(Color.Unspecified) }
+    color = if (isSystemInDarkTheme())
+    {
+        Color(0.137f, 0.149f, 0.188f, 1.0f)
+    }
+    else {
+        Color(0.898f, 0.902f, 0.945f, 1.0f)
+    }
+
+    val context = LocalContext.current
     var guests by remember { mutableStateOf<List<Guest>>(
         listOf(
             Guest(0)
@@ -132,6 +153,7 @@ fun AddDetails(modifier: Modifier = Modifier) {
     }
 
     val intmap = mapOf(1 to "One", 2 to "Two", 3 to "Three", 4 to "Four")
+    var error_text by remember { mutableStateOf("") }
 
     Column (modifier) {
         Box(
@@ -161,25 +183,28 @@ fun AddDetails(modifier: Modifier = Modifier) {
             }
         }
         Spacer(Modifier.height(10.dp).fillMaxWidth())
-        Box(Modifier.weight(0.15f).padding(10.dp, 0.dp))
+        Box(Modifier.weight(0.10f).padding(10.dp, 0.dp), contentAlignment = Alignment.BottomCenter)
         {
             UserCounter(alter=alterUserCount)
         }
 
-        Box(Modifier.weight(0.85f).padding(30.dp, 0.dp))
+        Box(Modifier.weight(0.8f).padding(30.dp, 0.dp))
         {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(5.dp, 10.dp)
+                contentPadding = PaddingValues(5.dp, 10.dp),
+                verticalArrangement = Arrangement.Center
             ) {
                 items(guests) { guest ->
+
                     Column (
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(5.dp)
                             .shadow(4.dp, shape = RoundedCornerShape(22.dp))
                             .clip(RoundedCornerShape(22.dp))
-                            .background(MaterialTheme.colorScheme.background)
+                            .background(color)
+                            .animateItemPlacement()
                     ){
                         Row (Modifier.padding(15.dp, 15.dp, 15.dp, 0.dp)){
                             Text(
@@ -191,6 +216,53 @@ fun AddDetails(modifier: Modifier = Modifier) {
                             GuestInfo(guest)
                         }
 
+                    }
+                    Spacer(Modifier.height(5.dp))
+                }
+            }
+        }
+        Box(
+            Modifier.weight(0.15f).fillMaxWidth().padding(30.dp, 5.dp),
+            contentAlignment = Alignment.Center
+        )
+        {
+            Row (verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center){
+                Column (Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+
+                    Text(error_text,
+                    fontSize = TextUnit(3f, TextUnitType.Em),
+                    textAlign = TextAlign.Center,
+                    color = Color(0.686f, 0.329f, 0.329f),
+                    modifier=Modifier.padding(5.dp))
+
+                    Button(onClick = {
+                        var hasEmail = false
+                        var invalid = false
+                        for(g in guests)
+                        {
+                            if (g.firstName.isEmpty()
+                                || g.lastName.isEmpty())
+                            {
+                                error_text = "Please fill required details!"
+                                invalid = true
+                            }
+                            if (g.firstName.isNotEmpty()) hasEmail = true
+                        }
+                        if(!hasEmail&&!invalid) error_text = "Please include an email address for the booking!"
+                        else {
+                            if(!invalid)
+                            {
+                                val temp = Guests(guests)
+                                val intent = Intent(context, FinalizeActivity::class.java).apply {
+                                    putExtra("hotelData", hotelInfo)
+                                    putExtra("searchReq", searchReq)
+                                    putExtra("guests", temp)
+                                }
+                                context.startActivity(intent)
+                            }
+                        }
+                    }) {
+                        Text("Go to checkout", textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -205,6 +277,7 @@ fun GuestInfo(guest: Guest) {
     var fn by remember { mutableStateOf(guest.firstName) }
     var ln by remember { mutableStateOf(guest.lastName) }
     var age by remember { mutableStateOf(guest.age) }
+    var email by remember { mutableStateOf(guest.email) }
 
     Column {
         Row {
@@ -213,23 +286,38 @@ fun GuestInfo(guest: Guest) {
                 onValueChange = {
                     fn = it
                     guest.firstName = fn },
-                label = { Text("First Name") },
+                label = { Text("First Name*") },
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .padding(5.dp)
+            )
+            OutlinedTextField(
+                value = ln,
+                onValueChange = {
+                    ln = it
+                    guest.lastName = ln },
+                label = { Text("Last Name*") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(5.dp)
             )
         }
         Row (Modifier.fillMaxWidth()){
+
             OutlinedTextField(
-                value = ln,
+                value = email,
                 onValueChange = {
-                    ln = it
-                    guest.lastName = ln },
-                label = { Text("Last Name") },
+                    email = it
+                    guest.email = email
+                },
+                label = { Text("Email Address") },
                 modifier = Modifier
-                    .fillMaxWidth(0.5f)
+                    .fillMaxWidth()
                     .padding(5.dp)
             )
+        }
+        Row (Modifier.fillMaxWidth()){
+            GenderDropdown(guest)
             OutlinedTextField(
                 value = age,
                 onValueChange = {
@@ -238,15 +326,12 @@ fun GuestInfo(guest: Guest) {
                         age = it
                         guest.age = age
                     }
-                                },
+                },
                 label = { Text("Age") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(5.dp)
             )
-        }
-        Row (Modifier.fillMaxWidth()){
-            GenderDropdown(guest)
         }
     }
 }
@@ -261,7 +346,7 @@ fun GenderDropdown(guest: Guest) {
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded },
-        modifier = Modifier.padding(5.dp)
+        modifier = Modifier.padding(5.dp).fillMaxWidth(0.5f)
     ) {
         OutlinedTextField(
             value = selectedOption,
@@ -351,11 +436,3 @@ fun UserCounter(modifier: Modifier = Modifier, alter: (String) -> Unit) {
         }
     }
 }
-
-data class Guest (
-    var index: Int,
-    var firstName: String = "",
-    var lastName: String = "",
-    var gender: String = "Other",
-    var age: String = ""
-)

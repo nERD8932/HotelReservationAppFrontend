@@ -30,5 +30,17 @@
             android:name=".BookHotelActivity"
             android:exported="true"
             />
+        <activity
+            android:name=".FinalizeActivity"
+            android:exported="true"
+            />
+        <activity
+            android:name=".SuccessActivity"
+            android:exported="true"
+            />
+        <activity
+            android:name=".FailureActivity"
+            android:exported="true"
+            />
     </application>
 </manifest>

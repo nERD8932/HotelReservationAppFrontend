@@ -1,10 +1,17 @@
 package com.smu.mcda.hotelreservationapp.network
 
+import android.os.Build
 import android.os.Parcelable
+import androidx.annotation.RequiresApi
 import kotlinx.parcelize.Parcelize
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Query
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 data class ImageData(
     val filename: String,
@@ -39,6 +46,31 @@ data class LocationData(
     val imageData: ImageData
 )
 
+data class BookRequest(
+    val startDate: String,
+    val endDate: String,
+    val location: String,
+    val guests: List<Guest>,
+    val hotelId: Int,
+    val roomNumber: Int
+)
+
+@Parcelize
+data class Guest (
+    var index: Int,
+    var firstName: String = "",
+    var lastName: String = "",
+    var gender: String = "Other",
+    var age: String = "",
+    var email: String = ""
+) : Parcelable
+
+@Parcelize
+data class Guests(
+    var list: List<Guest>
+) : Parcelable
+
+
 interface ApiService {
     @GET("media/")
     suspend fun getImages(): List<ImageData>
@@ -50,4 +82,23 @@ interface ApiService {
     suspend fun searchHotels(@Query("startDate") startDate: String,
                              @Query("endDate") endDate: String,
                              @Query("location") location: String): SearchResults?
+
+    @POST("book/")
+    suspend fun book(@Body request: BookRequest): Response<Unit>
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun String.formatDate(): String {
+    val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val outputFormatter = DateTimeFormatter.ofPattern("MMMM d, yyyy")
+    val date = LocalDate.parse(this, inputFormatter)
+    return date.format(outputFormatter)
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun nightsBetween(startDate: String, endDate: String): Long {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+    val start = LocalDate.parse(startDate, formatter)
+    val end = LocalDate.parse(endDate, formatter)
+    return ChronoUnit.DAYS.between(start, end)
 }

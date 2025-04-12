@@ -4,16 +4,20 @@ import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.util.ArraySet
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,11 +69,13 @@ import com.smu.mcda.hotelreservationapp.network.HotelData
 import com.smu.mcda.hotelreservationapp.network.RetrofitClient
 import com.smu.mcda.hotelreservationapp.network.SearchRequest
 import com.smu.mcda.hotelreservationapp.network.SearchResults
+import com.smu.mcda.hotelreservationapp.network.formatDate
 import com.smu.mcda.hotelreservationapp.ui.theme.HotelReservationAppTheme
-
+import kotlinx.parcelize.parcelableCreator
 
 
 class SearchResultsActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -108,9 +114,19 @@ class SearchResultsActivity : ComponentActivity() {
                                         modifier = Modifier
                                     )
                                 }
+                                Row {
+                                    var txt = "Hotels available from ${searchReq!!.startDate.formatDate()} to ${searchReq.endDate.formatDate()}"
+                                    if (searchReq.location.isNotEmpty()) txt += " in ${searchReq.location}"
+                                    Text(
+                                        txt,
+                                        textAlign = TextAlign.Center,
+                                        fontSize = TextUnit(3f, TextUnitType.Em),
+                                        modifier = Modifier
+                                    )
+                                }
                             }
                         }
-                        Box(Modifier.weight(0.9f).padding(30.dp, 0.dp))
+                        Box(Modifier.weight(0.9f).padding(20.dp, 0.dp))
                         {
                             if (searchReq != null) {
                                 SearchResults(
@@ -146,6 +162,15 @@ fun SearchResults(modifier: Modifier = Modifier, searchReq: SearchRequest){
     var loaded by remember { mutableStateOf(false)}
     // var results by remember { mutableStateOf(emptyList<String>()) }
     val context = LocalContext.current
+
+    var color by remember { mutableStateOf(Color.Unspecified) }
+    color = if (isSystemInDarkTheme())
+    {
+        Color(0.137f, 0.149f, 0.188f, 1.0f)
+    }
+    else {
+        Color(0.898f, 0.902f, 0.945f, 1.0f)
+    }
 
     LaunchedEffect(Unit) {
         try {
@@ -203,12 +228,13 @@ fun SearchResults(modifier: Modifier = Modifier, searchReq: SearchRequest){
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(5.dp)
             ) {
-                items(response!!.hotelData) { hotel ->
+                items(response!!.hotelData) { hotel: HotelData ->
                     HotelEntry(
-                        hotel,
-                        images[hotel.hotelId]!!,
+                        h=hotel,
+                        i=images[hotel.hotelId]!!,
                         searchReq = searchReq,
-                        context = context
+                        context = context,
+                        color = color
                     )
                 }
             }
@@ -232,11 +258,12 @@ fun SearchResults(modifier: Modifier = Modifier, searchReq: SearchRequest){
 }
 // img: ImageBitmap, name: String, roomType: String, price: Int
 @Composable
-fun HotelEntry(h: HotelData, i: ImageBitmap, modifier: Modifier = Modifier, searchReq: SearchRequest, context: Context) {
+fun HotelEntry(h: HotelData, i: ImageBitmap, modifier: Modifier = Modifier, searchReq: SearchRequest, context: Context, color: Color) {
+
     Spacer(Modifier.height(5.dp))
     Box(modifier = modifier
         .fillMaxWidth()
-        .height(170.dp)
+        .height(200.dp)
         .shadow(4.dp, shape = RoundedCornerShape(20.dp))
         .clickable(
             indication = rememberRipple(bounded = true),
@@ -261,7 +288,7 @@ fun HotelEntry(h: HotelData, i: ImageBitmap, modifier: Modifier = Modifier, sear
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .matchParentSize()
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(20.dp))
         )
 
         Box(
@@ -271,18 +298,18 @@ fun HotelEntry(h: HotelData, i: ImageBitmap, modifier: Modifier = Modifier, sear
                 .fillMaxWidth()
                 .wrapContentHeight()
                 .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-                .background(MaterialTheme.colorScheme.background)
+                .background(color.copy(alpha = 0.98f))
                 .padding(8.dp)
         )
         {
             Row (Modifier.fillMaxWidth().wrapContentHeight()) {
-                Column (Modifier.fillMaxWidth(0.5f),
+                Column (Modifier.fillMaxWidth(0.5f).padding(10.dp, 5.dp),
                     horizontalAlignment = Alignment.Start) {
                     Text(
                         "${h.name} Hotel",
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Left,
-                        fontSize = TextUnit(4f, TextUnitType.Em),
+                        fontSize = TextUnit(4.2f, TextUnitType.Em),
                         modifier = Modifier
                     )
                     Text(
@@ -294,14 +321,14 @@ fun HotelEntry(h: HotelData, i: ImageBitmap, modifier: Modifier = Modifier, sear
                     )
                 }
                 Column (
-                    Modifier.fillMaxWidth(),
+                    Modifier.fillMaxWidth().padding(10.dp, 5.dp),
                     horizontalAlignment = Alignment.End
                     ) {
                     Text(
                         "${h.roomType} Room",
                         fontWeight = FontWeight.SemiBold,
                         textAlign = TextAlign.Right,
-                        fontSize = TextUnit(4f, TextUnitType.Em),
+                        fontSize = TextUnit(3.6f, TextUnitType.Em),
                         modifier = Modifier
                     )
                     Text(
